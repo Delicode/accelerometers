@@ -102,11 +102,6 @@ void main()
         zAccl -= 65536;
         }
 
-        // Output data to screen
-        printf("Acceleration in X-Axis : %d \n", xAccl);
-        printf("Acceleration in Y-Axis : %d \n", yAccl);
-        printf("Acceleration in Z-Axis : %d \n", zAccl);
-
         // Get I2C device, LSM303DLHC MAGNETO I2C address is 0x1E(30)
         ioctl(file, I2C_SLAVE, 0x1E);
 
@@ -185,6 +180,9 @@ void main()
         }
 
         // Output data to screen
+        printf("Acceleration in X-Axis : %d \n", xAccl);
+        printf("Acceleration in Y-Axis : %d \n", yAccl);
+        printf("Acceleration in Z-Axis : %d \n", zAccl);
         printf("Magnetic field in X-Axis : %d \n", xMag);
         printf("Magnetic field in Y-Axis : %d \n", yMag);
         printf("Magnetic field in Z-Axis : %d \n", zMag);
