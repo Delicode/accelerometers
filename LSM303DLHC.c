@@ -77,7 +77,9 @@ int8_t get_accl_data(int file, struct accl_data* out) {
 
     Where bits
         * bdu sets block data update state to either 0 (continuous)
-        or 1 which only updates when MSB or LSB
+        or 1 which does not update registers until MSB or LSB reading.
+        I assume this means that the data is only updated when the data
+        registers are read?
         * ble specifies either big endian or little endian data selection
         0 -> LSB is at lower address, 1 -> MSB is at lower address
         * fs1, fs0: "Full-scale selection", what is this?
