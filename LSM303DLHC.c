@@ -176,19 +176,58 @@ int8_t get_magn_data(int file, struct magn_data* out) {
     ioctl(file, I2C_SLAVE, 0x1E);
 
     // Select MR register(0x02)
-    // Continuous conversion(0x00)
+    /**
+
+    -------------------------------------
+    | 0 | 0 | 0 | 0 | 0 | 0 | md1 | md0 |
+    -------------------------------------
+
+    where bits
+        * md1, md0: magnetic sensor operating mode
+        00: continous-conversion mode
+        01: single-conversion mode
+        10, 11: Sleep mode. Device is placed in sleep mode
+    */
+
     config[0] = 0x02;
     config[1] = 0x00;
     write(file, config, 2);
 
     // Select CRA register(0x00)
-    // Data output rate = 15Hz(0x10)
+    /**
+    ---------------------------------------------
+    | temp_en | 0 | 0 | DO2 | DO1 | DO0 | 0 | 0 |
+    ---------------------------------------------
+
+    where bits
+        * temp_en: temperature sensor enable. 0: disabled, 1: enabled
+        * DO2, DO1, DO0: Data output rate bits
+        100: 15Hz
+    
+    0001 0000 == 0x10
+    */
+
     config[0] = 0x00;
     config[1] = 0x10;
     write(file, config, 2);
 
     // Select CRB register(0x01)
     // Set gain = +/- 1.3g(0x20)
+
+    /**
+    ---------------------------------------
+    | GN2 | GN1 | GN0 | 0 | 0 | 0 | 0 | 0 |
+    ---------------------------------------
+
+    where bits
+        GN2, GN1, GN0: gain configuration bits
+        001: sensor input field range [Gauss]: +/- 1.3,
+             gain X, Y, Z [LSB/Gauss]: 1100
+             gain Z [LSB/Gauss]: 980
+             output range: 0xF800 - 0x07FF (-2048 - 2047)
+        0010 0000 == 0x20
+    */
+
     config[0] = 0x01;
     config[1] = 0x20;
     write(file, config, 2);
