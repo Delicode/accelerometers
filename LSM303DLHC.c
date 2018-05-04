@@ -350,12 +350,6 @@ int main() {
             m_sum_y / (double)data_count,
             m_sum_z / (double)data_count
         );
-
-        float heading = atan2(magn.yMag, magn.xMag);
-        float headingDeg = heading * (180.0 / (float)M_PI);
-        if (headingDeg < 0)
-            headingDeg += 360; 
-        fprintf(stderr, "heading: %f\n", headingDeg);
 #endif
     }
 
