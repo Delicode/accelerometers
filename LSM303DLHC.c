@@ -14,19 +14,21 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 
 const char* bus = "/dev/i2c-1";
+const double GRAVITY_EARTH = 9.81;
 
 struct accl_data {
-    int64_t xAccl;
-    int64_t yAccl;
-    int64_t zAccl;
+    double xAccl;
+    double yAccl;
+    double zAccl;
 };
 
 struct magn_data {
-    int64_t xMag;
-    int64_t yMag;
-    int64_t zMag;
+    double xMag;
+    double yMag;
+    double zMag;
 };
 
 int8_t open_dev(int* handle) {
@@ -88,13 +90,20 @@ int8_t get_accl_data(int file, struct accl_data* out) {
         * SIM: "SPI serial interface mode selection", what is this?
         0: 4-wire access, 1: 3-wire access
 
-        Set all to 0
+        Set data to big endian and rest to 0: 01000000 -> 0x40
     */
+
+    uint8_t xlo = 0;
+    uint8_t xhi = 0;
+    uint8_t ylo = 0;
+    uint8_t yhi = 0;
+    uint8_t zlo = 0;
+    uint8_t zhi = 0;
 
     config[0] = 0x23;
     config[1] = 0x00;
     write(file, config, 2);
-    usleep(1000 * 250);
+    usleep(1000 * 50);
 
     // Read 6 bytes of data
     // lsb first
@@ -108,60 +117,47 @@ int8_t get_accl_data(int file, struct accl_data* out) {
         return 1;
     }
 
-    char data_0 = data[0];
+    xlo = data[0];
 
     // Read xAccl msb data from register(0x29)
     reg[0] = 0x29;
     write(file, reg, 1);
     read(file, data, 1);
-    char data_1 = data[0];
+    xhi = data[0];
 
     // Read yAccl lsb data from register(0x2A)
     reg[0] = 0x2A;
     write(file, reg, 1);
     read(file, data, 1);
-    char data_2 = data[0];
+    ylo = data[0];
 
     // Read yAccl msb data from register(0x2B)
     reg[0] = 0x2B;
     write(file, reg, 1);
     read(file, data, 1);
-    char data_3 = data[0];
+    yhi = data[0];
 
     // Read zAccl lsb data from register(0x2C)
     reg[0] = 0x2C;
     write(file, reg, 1);
     read(file, data, 1);
-    char data_4 = data[0];
+    zlo = data[0];
 
     // Read zAccl msb data from register(0x2D)
     reg[0] = 0x2D;
     write(file, reg, 1);
     read(file, data, 1);
-    char data_5 = data[0];
+    zhi = data[0];
 
-    // Convert the data
-    int xAccl = (data_1 * 256 + data_0);
-    if(xAccl > 32767)
-    {
-        xAccl -= 65536;
-    }
+    // Convert from little endian two's complement to int
+    out->xAccl = (int16_t)(xlo | (xhi << 8)) >> 4;
+    out->yAccl = (int16_t)(ylo | (yhi << 8)) >> 4;
+    out->zAccl = (int16_t)(zlo | (zhi << 8)) >> 4;
 
-    int yAccl = (data_3 * 256 + data_2);
-    if(yAccl > 32767)
-    {
-        yAccl -= 65536;
-    }
-
-    int zAccl = (data_5 * 256 + data_4);
-    if(zAccl > 32767)
-    {
-        zAccl -= 65536;
-    }
-
-    out->xAccl = xAccl;
-    out->yAccl = yAccl;
-    out->zAccl = zAccl;
+    // Convert from LSB/g to m/s
+    out->xAccl *= 0.001 * GRAVITY_EARTH;
+    out->yAccl *= 0.001 * GRAVITY_EARTH;
+    out->zAccl *= 0.001 * GRAVITY_EARTH;
 
     return 0;
 }
@@ -235,68 +231,63 @@ int8_t get_magn_data(int file, struct magn_data* out) {
     config[0] = 0x01;
     config[1] = 0x20;
     write(file, config, 2);
-    usleep(1000 * 250);
+    usleep(1000 * 50);
+
+    uint8_t xhi = 0;
+    uint8_t xlo = 0;
+    uint8_t yhi = 0;
+    uint8_t ylo = 0;
+    uint8_t zhi = 0;
+    uint8_t zlo = 0;
 
     // Read 6 bytes of data
     // msb first
+
     // Read xMag msb data from register(0x03)
     reg[0] = 0x03;
     write(file, reg, 1);
     read(file, data, 1);
-    char data1_0 = data[0];
+    xhi = data[0];
 
     // Read xMag lsb data from register(0x04)
     reg[0] = 0x04;
     write(file, reg, 1);
     read(file, data, 1);
-    char data1_1 = data[0];
+    xlo = data[0];
 
-    // Read yMag msb data from register(0x05)
+    // Read zMag msb data from register(0x05)
     reg[0] = 0x05;
     write(file, reg, 1);
     read(file, data, 1);
-    char data1_2 = data[0];
+    zhi = data[0];
 
-    // Read yMag lsb data from register(0x06)
+    // Read zMag lsb data from register(0x06)
     reg[0] = 0x06;
     write(file, reg, 1);
     read(file, data, 1);
-    char data1_3 = data[0];
+    zlo = data[0];
 
-    // Read zMag msb data from register(0x07)
+    // Read yMag msb data from register(0x07)
     reg[0] = 0x07;
     write(file, reg, 1);
     read(file, data, 1);
-    char data1_4 = data[0];
+    yhi = data[0];
 
-    // Read zMag lsb data from register(0x08)
+    // Read yMag lsb data from register(0x08)
     reg[0] = 0x08;
     write(file, reg, 1);
     read(file, data, 1);
-    char data1_5 = data[0];
+    ylo = data[0];
 
-    // Convert the data
-    int xMag = (data1_0 * 256 + data1_1);
-    if(xMag > 32767)
-    {
-        xMag -= 65536;
-    }	
+    // big endian two's complement to double
+    out->xMag = (double)((int16_t)(xlo | ((int16_t)xhi << 8)));
+    out->yMag = (double)((int16_t)(ylo | ((int16_t)yhi << 8)));
+    out->zMag = (double)((int16_t)(zlo | ((int16_t)zhi << 8)));
 
-    int yMag = (data1_4 * 256 + data1_5) ;
-    if(yMag > 32767)
-    {
-        yMag -= 65536;
-    }
-
-    int zMag = (data1_2 * 256 + data1_3) ;
-    if(zMag > 32767)
-    {
-        zMag -= 65536;
-    }
-
-    out->xMag = xMag;
-    out->yMag = yMag;
-    out->zMag = zMag;
+    // Convert from LSB/gauss to gauss
+    out->xMag /= 1100.0;
+    out->yMag /= 1100.0;
+    out->zMag /= 980.0;
 
     return 0;
 }
@@ -345,20 +336,26 @@ int main() {
         m_sum_y += magn.yMag;
         m_sum_z += magn.zMag;
 
-        fprintf(stderr, "Accelerometer: %ld, %ld %ld, avg %lf, %lf, %lf\n",
+#if 0
+        fprintf(stderr, "Accelerometer: %lf, %lf %lf, avg %lf, %lf, %lf\n",
             accl.xAccl, accl.yAccl, accl.zAccl,
             a_sum_x / (double)data_count,
             a_sum_y / (double)data_count,
             a_sum_z / (double)data_count
-            );
-
-#if 0
-        fprintf(stderr, "Magnetometer: %ld, %ld, %ld, avg %lf, %lf, %lf\n",
+        );
+#else
+        fprintf(stderr, "Magnetometer (gauss): %lf, %lf, %lf, avg %lf, %lf, %lf\n",
             magn.xMag, magn.yMag, magn.zMag,
             m_sum_x / (double)data_count,
             m_sum_y / (double)data_count,
             m_sum_z / (double)data_count
-            );
+        );
+
+        float heading = atan2(magn.yMag, magn.xMag);
+        float headingDeg = heading * (180.0 / (float)M_PI);
+        if (headingDeg < 0)
+            headingDeg += 360; 
+        fprintf(stderr, "heading: %f\n", headingDeg);
 #endif
     }
 
