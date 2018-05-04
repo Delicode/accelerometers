@@ -150,9 +150,9 @@ int8_t get_accl_data(int file, struct accl_data* out) {
     zhi = data[0];
 
     // Convert from little endian two's complement to int
-    out->xAccl = (int16_t)(xlo | (xhi << 8)) >> 4;
-    out->yAccl = (int16_t)(ylo | (yhi << 8)) >> 4;
-    out->zAccl = (int16_t)(zlo | (zhi << 8)) >> 4;
+    out->xAccl = (double)((int16_t)(xlo | (xhi << 8)) >> 4);
+    out->yAccl = (double)((int16_t)(ylo | (yhi << 8)) >> 4);
+    out->zAccl = (double)((int16_t)(zlo | (zhi << 8)) >> 4);
 
     // Convert from LSB/g to m/s
     out->xAccl *= 0.001 * GRAVITY_EARTH;
@@ -280,9 +280,9 @@ int8_t get_magn_data(int file, struct magn_data* out) {
     ylo = data[0];
 
     // big endian two's complement to double
-    out->xMag = (double)((int16_t)(xlo | ((int16_t)xhi << 8)));
-    out->yMag = (double)((int16_t)(ylo | ((int16_t)yhi << 8)));
-    out->zMag = (double)((int16_t)(zlo | ((int16_t)zhi << 8)));
+    out->xMag = (double)((int16_t)(xlo | (xhi << 8)));
+    out->yMag = (double)((int16_t)(ylo | (yhi << 8)));
+    out->zMag = (double)((int16_t)(zlo | (zhi << 8)));
 
     // Convert from LSB/gauss to gauss
     out->xMag /= 1100.0;
@@ -303,9 +303,6 @@ int main() {
 
     struct accl_data accl;
     struct magn_data magn;
-
-    struct accl_data accl_sum;
-    struct magn_data magn_sum;
 
     double a_sum_x = 0;
     double a_sum_y = 0;
@@ -336,14 +333,16 @@ int main() {
         m_sum_y += magn.yMag;
         m_sum_z += magn.zMag;
 
-#if 0
-        fprintf(stderr, "Accelerometer: %lf, %lf %lf, avg %lf, %lf, %lf\n",
+#if 1
+        fprintf(stderr, "Accelerometer (m/s): %lf, %lf %lf, avg %lf, %lf, %lf\n",
             accl.xAccl, accl.yAccl, accl.zAccl,
             a_sum_x / (double)data_count,
             a_sum_y / (double)data_count,
             a_sum_z / (double)data_count
         );
-#else
+#endif
+
+#if 1
         fprintf(stderr, "Magnetometer (gauss): %lf, %lf, %lf, avg %lf, %lf, %lf\n",
             magn.xMag, magn.yMag, magn.zMag,
             m_sum_x / (double)data_count,
