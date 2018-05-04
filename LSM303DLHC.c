@@ -150,14 +150,17 @@ int8_t get_accl_data(int file, struct accl_data* out) {
     zhi = data[0];
 
     // Convert from little endian two's complement to int
+
+    // Datasheet incorrectly states the data length: the output
+    // is only 12 bits so shift it by 4
     out->xAccl = (double)((int16_t)(xlo | (xhi << 8)) >> 4);
     out->yAccl = (double)((int16_t)(ylo | (yhi << 8)) >> 4);
     out->zAccl = (double)((int16_t)(zlo | (zhi << 8)) >> 4);
 
     // Convert from LSB/g to m/s
-    out->xAccl *= 0.001 * GRAVITY_EARTH;
-    out->yAccl *= 0.001 * GRAVITY_EARTH;
-    out->zAccl *= 0.001 * GRAVITY_EARTH;
+    out->xAccl *= 0.001;// * GRAVITY_EARTH;
+    out->yAccl *= 0.001;// * GRAVITY_EARTH;
+    out->zAccl *= 0.001;// * GRAVITY_EARTH;
 
     return 0;
 }
@@ -280,9 +283,10 @@ int8_t get_magn_data(int file, struct magn_data* out) {
     ylo = data[0];
 
     // big endian two's complement to double
-    out->xMag = (double)((int16_t)(xlo | (xhi << 8)));
-    out->yMag = (double)((int16_t)(ylo | (yhi << 8)));
-    out->zMag = (double)((int16_t)(zlo | (zhi << 8)));
+    // the magnetometer data is 16 bits unlike the accelerometer
+    out->xMag = (double)(int16_t)(xlo | ((uint16_t)xhi << 8));
+    out->yMag = (double)(int16_t)(ylo | ((uint16_t)yhi << 8));
+    out->zMag = (double)(int16_t)(zlo | ((uint16_t)zhi << 8));
 
     // Convert from LSB/gauss to gauss
     out->xMag /= 1100.0;
